@@ -28,8 +28,8 @@ class HandDetector:
                 max_num_hands=self.max_num_hands,
                 min_detection_confidence=self.min_detection_confidence
             )
-        except ImportError:
-            # 실무형 예외 처리: broad exception 방지
+        except (ImportError, AttributeError):
+            # 💡 [버그 수정] 파이썬 최신 환경에서 발생하는 AttributeError까지 철저하게 방어합니다.
             self.mp_hands = None
             self.hands = None
 
