@@ -1,65 +1,42 @@
 import cv2
-import numpy as np
+import mediapipe as mp
 
 class HandDetector:
-    """오픈세스 기반으로 카메라 영상에서 손을 검출하는 부모 클래스입니다.
-
-    Example:
-        >>> import cv2
-        >>> detector = HandDetector()
-        >>> img = cv2.imread("blank.jpg")
-        >>> if img is not None:
-        ...     labs = detector.find_positions(img)
-    """
-
-    def __init__(self, max_num_hands=1, min_detection_confidence=0.5):
-        """HandDetector 클래스를 초기화합니다.
-
-        :param max_num_hands: 인식할 최대 손의 개수 (기본값 1)
-        :param min_detection_confidence: 검출 최소 신뢰도 (기본값 0.5)
-        """
-        self.max_num_hands = max_num_hands
-        self.min_detection_confidence = min_detection_confidence
-        
-        try:
-            import mediapipe as mp
-            self.mp_hands = mp.solutions.hands
-            self.hands = self.mp_hands.Hands(
-                max_num_hands=self.max_num_hands,
-                min_detection_confidence=self.min_detection_confidence
-            )
-        except (ImportError, AttributeError):
-            # 💡 [버그 수정] 파이썬 최신 환경에서 발생하는 AttributeError까지 철저하게 방어합니다.
-            self.mp_hands = None
-            self.hands = None
-
-    def _preprocess_image(self, img):
-        """이미지를 MediaPipe 래퍼가 인식할 수 있도록 BGR에서 RGB로 변환합니다.
-
-        :param img: OpenCV 이미지 프레임
-        :return: RGB로 변환된 이미지 프레임
-        """
-        if img is None:
-            return None
-        return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    """미디어파이프를 이용해 손을 감지하고 랜드마크를 추출하는 부모 클래스"""
+    
+    def __init__(self, max_num_hands=1, min_detection_confidence=0.7, min_tracking_confidence=0.5):
+        self.mp_hands = mp.solutions.hands
+        self.mp_draw = mp.solutions.drawing_utils
+        self.hands = self.mp_hands.Hands(
+            max_num_hands=max_num_hands,
+            min_detection_confidence=min_detection_confidence,
+            min_tracking_confidence=min_tracking_confidence
+        )
 
     def find_positions(self, img):
-        """이미지에서 손의 21개 랜드마크 좌표를 찾아 리스트로 반환합니다.
-
-        :param img: OpenCV 이미지 프레임
-        :return: (id, x, y) 튜플을 담은 21개의 랜드마크 리스트
+        """이미지에서 손의 랜드마크 고유 픽셀 좌표 리스트를 반환합니다.
+        
+        :param img: OpenCV BGR 이미지 프레임
+        :return: [[id, x, y], ...] 구조의 랜드마크 리스트
+        
+        >>> # 테스트 프레임 유효성 검증 예시
+        >>> detector = HandDetector()
+        >>> detector._is_valid_list([])
+        False
         """
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        self.results = self.hands.process(img_rgb)
         lm_list = []
-        if img is None or self.hands is None:
-            return lm_list
-
-        img_rgb = self._preprocess_image(img)
-        results = self.hands.process(img_rgb)
-
-        if results.multi_hand_landmarks:
-            h, w, _ = img.shape
-            for hand_lms in results.multi_hand_landmarks:
+        
+        if self.results.multi_hand_landmarks:
+            for hand_lms in self.results.multi_hand_landmarks:
+                self.mp_draw.draw_landmarks(img, hand_lms, self.mp_hands.HAND_CONNECTIONS)
                 for idx, lm in enumerate(hand_lms.landmark):
+                    h, w, c = img.shape
                     cx, cy = int(lm.x * w), int(lm.y * h)
-                    lm_list.append((idx, cx, cy))
+                    lm_list.append([idx, cx, cy])
         return lm_list
+
+    def _is_valid_list(self, lm_list):
+        """[비공개 메서드] 랜드마크 리스트가 유효한 손 구조(21개)를 갖추었는지 검증합니다."""
+        return len(lm_list) == 21

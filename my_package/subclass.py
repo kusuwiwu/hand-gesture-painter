@@ -1,45 +1,77 @@
-from .core import HandDetector
-from .utils import calculate_distance
+import cv2
+import numpy as np
+import ctypes
+from my_package.core import HandDetector
 
 class GesturePainter(HandDetector):
-    """HandDetector를 상속받아 제스처 인식 기능을 추가한 자식 클래스입니다.
-
-    Example:
-        >>> painter = GesturePainter(draw_color=(0, 0, 255))
-        >>> dummy_lms = [(i, 0, 0) for i in range(21)]
-        >>> result = painter.is_drawing_mode(dummy_lms)
-    """
-
-    def __init__(self, max_num_hands=1, min_detection_confidence=0.5, draw_color=(0, 0, 255)):
-        """super()를 사용하여 부모 클래스를 초기화하고, 자식만의 드로잉 색상을 지정합니다.
-
-        :param max_num_hands: 인식할 최대 손의 개수
-        :param min_detection_confidence: 검출 최소 신뢰도
-        :param draw_color: 그림을 그릴 BGR 색상 튜플
-        """
-        super().__init__(max_num_hands=max_num_hands, min_detection_confidence=min_detection_confidence)
+    """HandDetector를 상속받아 마우스 제어 및 실시간 캔버스 드로잉 기능을 수행하는 자식 클래스"""
+    
+    def __init__(self, max_num_hands=1, min_detection_confidence=0.7, draw_color=(0, 0, 255)):
+        # 부모 클래스의 생성자 호출 (과제 필수 요구사항 보장)
+        super().__init__(max_num_hands, min_detection_confidence)
         self.draw_color = draw_color
+        
+        # 모니터 해상도 획득
+        self.user32 = ctypes.windll.user32
+        self.screen_width = self.user32.GetSystemMetrics(0)
+        self.screen_height = self.user32.GetSystemMetrics(1)
+        
+        # 드로잉 및 스무딩 상태 변수
+        self.canvas = None
+        self.xp, self.yp = 0, 0
+        self.cloc_x, self.cloc_y = 0, 0
 
     def is_drawing_mode(self, lm_list):
-        """검지 손가락은 펴지고 중지는 접혀있는 '그리기 모드'인지 판별합니다.
-        AI dead code 지적을 극복하기 위해 두 손가락 간의 물리적 거리 계산 로직을 포함합니다.
-
-        :param lm_list: 부모 클래스의 find_positions 결과물인 랜드마크 리스트
-        :return: 그리기 모드 활성화 여부 (True/False)
+        """검지 손가락만 올라와서 그리기/이동 모드 상태인지 판별합니다.
+        
+        :param lm_list: 21개 손 랜드마크 좌표 리스트
+        :return: 모드 활성화 여부 (Boolean)
         """
-        if len(lm_list) < 21:
+        if not self._is_valid_list(lm_list):
             return False
+        # 검지는 펼쳐지고(8번 끝이 6번보다 위), 중지는 접힌 상태(12번 끝이 10번보다 아래)
+        return lm_list[8][2] < lm_list[6][2] and lm_list[12][2] > lm_list[10][2]
 
-        # 검지 손가락 끝(8)과 마디(6) 비교 (화면 좌표계 특성 반영: y가 작을수록 위)
-        is_index_open = lm_list[8][2] < lm_list[6][2]
-        
-        # 중지 손가락 끝(12)과 마디(10) 비교 (접힌 상태 확인)
-        is_middle_closed = lm_list[12][2] > lm_list[10][2]
-        
-        # 임포트한 도우미 함수(calculate_distance)를 실제로 활용하여 신뢰도 강화 (Dead Code 제거!)
-        index_tip = (lm_list[8][1], lm_list[8][2])
-        middle_tip = (lm_list[12][1], lm_list[12][2])
-        tip_distance = calculate_distance(index_tip, middle_tip)
-        
-        # 검지와 중지 거리가 어느 정도 확보되었을 때만 안정적인 단독 검지 모드로 인정
-        return is_index_open and is_middle_closed and tip_distance > 20.0
+    def draw_and_move(self, img, lm_list, smoothening=5):
+        """마우스를 이동시키고 그리기 모드일 때 자식 클래스의 고유 캔버스에 선을 그립니다."""
+        h, w, c = img.shape
+        if self.canvas is None:
+            self.canvas = np.zeros((h, w, 3), dtype=np.uint8)
+
+        if self._is_valid_list(lm_list):
+            cx, cy = lm_list[8][1], lm_list[8][2]
+            
+            # 좌표 변환 및 평활화 (Smoothing)
+            target_x = (cx / w) * self.screen_width
+            target_y = (cy / h) * self.screen_height
+            self.cloc_x += (target_x - self.cloc_x) / smoothening
+            self.cloc_y += (target_y - self.cloc_y) / smoothening
+            
+            # 마우스 이동 (비공개 메서드 우회 호출)
+            self._safe_move_mouse(int(self.cloc_x), int(self.cloc_y))
+            
+            if self.is_drawing_mode(lm_list):
+                cv2.circle(img, (cx, cy), 7, self.draw_color, cv2.FILLED)
+                if self.xp == 0 and self.yp == 0:
+                    self.xp, self.yp = cx, cy
+                cv2.line(self.canvas, (self.xp, self.yp), (cx, cy), self.draw_color, 5)
+                self.xp, self.yp = cx, cy
+            else:
+                cv2.circle(img, (cx, cy), 7, (255, 0, 255), cv2.FILLED)
+                self.xp, self.yp = 0, 0
+        else:
+            self.xp, self.yp = 0, 0
+
+        # 캔버스 합성 연산
+        img_gray = cv2.cvtColor(self.canvas, cv2.COLOR_BGR2GRAY)
+        _, img_inv = cv2.threshold(img_gray, 50, 255, cv2.THRESH_BINARY_INV)
+        img_inv = cv2.cvtColor(img_inv, cv2.COLOR_GRAY2BGR)
+        img = cv2.bitwise_and(img, img_inv)
+        img = cv2.bitwise_or(img, self.canvas)
+        return img
+
+    def _safe_move_mouse(self, x, y):
+        """[비공개 메서드] 화면 해상도 범위를 벗어나지 않도록 안전하게 마우스를 이동시킵니다."""
+        safe_x = max(0, min(x, self.screen_width - 1))
+        safe_y = max(0, min(y, self.screen_height - 1))
+        self.user32.SetCursorPos(safe_x, safe_y)
