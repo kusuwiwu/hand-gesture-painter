@@ -1,77 +1,115 @@
 import cv2
 import numpy as np
-import ctypes
-from my_package.core import HandDetector
+
+from .core import HandDetector
+from .utils import calculate_distance
+
 
 class GesturePainter(HandDetector):
-    """HandDetector를 상속받아 마우스 제어 및 실시간 캔버스 드로잉 기능을 수행하는 자식 클래스"""
-    
-    def __init__(self, max_num_hands=1, min_detection_confidence=0.7, draw_color=(0, 0, 255)):
-        # 부모 클래스의 생성자 호출 (과제 필수 요구사항 보장)
-        super().__init__(max_num_hands, min_detection_confidence)
+    """HandDetector를 상속받아 특정 제스처(그리기 모드)를 판별하고 누적 선을 그리는 클래스."""
+
+    def __init__(
+        self,
+        max_num_hands=1,
+        min_detection_confidence=0.7,
+        min_tracking_confidence=0.5,
+        draw_color=(0, 0, 255)
+    ):
+        """부모 생성자를 호출하고 선을 영구 기록할 독립 캔버스 메모리를 할당합니다.
+
+        :param max_num_hands: 검출할 최대 손의 개수 (int)
+        :param min_detection_confidence: 검출 최소 신뢰도 임계값 (float)
+        :param min_tracking_confidence: 추적 최소 신뢰도 임계값 (float)
+        :param draw_color: 캔버스에 그릴 선의 BGR 색상 튜플 (tuple)
+        """
+        super().__init__(
+            max_num_hands,
+            min_detection_confidence,
+            min_tracking_confidence
+        )
         self.draw_color = draw_color
-        
-        # 모니터 해상도 획득
-        self.user32 = ctypes.windll.user32
-        self.screen_width = self.user32.GetSystemMetrics(0)
-        self.screen_height = self.user32.GetSystemMetrics(1)
-        
-        # 드로잉 및 스무딩 상태 변수
+        # 영구적인 그림 궤적 저장을 위한 투명 캔버스와 실시간 이전 좌표 기억 장치
         self.canvas = None
-        self.xp, self.yp = 0, 0
-        self.cloc_x, self.cloc_y = 0, 0
+        self.prev_x, self.prev_y = 0, 0
 
     def is_drawing_mode(self, lm_list):
-        """검지 손가락만 올라와서 그리기/이동 모드 상태인지 판별합니다.
-        
-        :param lm_list: 21개 손 랜드마크 좌표 리스트
-        :return: 모드 활성화 여부 (Boolean)
+        """검지 손가락만 명확하게 펼쳐진 그리기 모드 상태인지 판별합니다.
+
+        :param lm_list: find_positions 메서드에서 추출된 21개 랜드마크 픽셀 좌표 리스트 (list)
+        :return: 그리기 모드(검지 오픈 및 중지 클로즈) 조건 충족 여부 (bool)
         """
+        # 부모의 방어 코드를 활용해 유효성 검사
         if not self._is_valid_list(lm_list):
             return False
-        # 검지는 펼쳐지고(8번 끝이 6번보다 위), 중지는 접힌 상태(12번 끝이 10번보다 아래)
-        return lm_list[8][2] < lm_list[6][2] and lm_list[12][2] > lm_list[10][2]
 
-    def draw_and_move(self, img, lm_list, smoothening=5):
-        """마우스를 이동시키고 그리기 모드일 때 자식 클래스의 고유 캔버스에 선을 그립니다."""
-        h, w, c = img.shape
+
+        try:
+            # 부모 클래스의 전역 상수를 바인딩하여 함수 내 대문자 변수 선언 경고 회피
+            idx_tip_y = lm_list[self.INDEX_FINGER_TIP][self.Y_COORD_IDX]
+            idx_pip_y = lm_list[self.INDEX_FINGER_PIP][self.Y_COORD_IDX]
+            mid_tip_y = lm_list[self.MIDDLE_FINGER_TIP][self.Y_COORD_IDX]
+            mid_pip_y = lm_list[self.MIDDLE_FINGER_PIP][self.Y_COORD_IDX]
+        except IndexError:
+            # 리스트 크기가 부족해 좌표를 가져오지 못하면 false
+            return False
+
+        index_finger_open = idx_tip_y < idx_pip_y
+        middle_finger_closed = mid_tip_y > mid_pip_y
+
+        return index_finger_open and middle_finger_closed
+
+    def draw_canvas(self, frame, lm_list):
+        """검지 손가락의 궤적을 투명 캔버스에 선으로 누적하고 원본 프레임과 마스크 합성합니다.
+
+        :param frame: 웹캠으로부터 입력받은 현재 이미지 프레임 (numpy.ndarray 또는 None)
+        :param lm_list: find_positions 메서드에서 추출된 랜드마크 픽셀 좌표 리스트 (list)
+        :return: 캔버스 선 궤적이 누적 합성된 최종 이미지 프레임 (numpy.ndarray 또는 None)
+        """
+        if frame is None:
+            return None
+
+        # 캔버스가 비어있다면 현재 카메라 프레임 크기와 동일한 검은색 도화지 생성
         if self.canvas is None:
-            self.canvas = np.zeros((h, w, 3), dtype=np.uint8)
+            self.canvas = np.zeros_like(frame)
 
-        if self._is_valid_list(lm_list):
-            cx, cy = lm_list[8][1], lm_list[8][2]
-            
-            # 좌표 변환 및 평활화 (Smoothing)
-            target_x = (cx / w) * self.screen_width
-            target_y = (cy / h) * self.screen_height
-            self.cloc_x += (target_x - self.cloc_x) / smoothening
-            self.cloc_y += (target_y - self.cloc_y) / smoothening
-            
-            # 마우스 이동 (비공개 메서드 우회 호출)
-            self._safe_move_mouse(int(self.cloc_x), int(self.cloc_y))
-            
-            if self.is_drawing_mode(lm_list):
-                cv2.circle(img, (cx, cy), 7, self.draw_color, cv2.FILLED)
-                if self.xp == 0 and self.yp == 0:
-                    self.xp, self.yp = cx, cy
-                cv2.line(self.canvas, (self.xp, self.yp), (cx, cy), self.draw_color, 5)
-                self.xp, self.yp = cx, cy
-            else:
-                cv2.circle(img, (cx, cy), 7, (255, 0, 255), cv2.FILLED)
-                self.xp, self.yp = 0, 0
+        if self.is_drawing_mode(lm_list):
+            # [도우미 메서드 활용] 복잡한 좌표 계산 및 실시간 선 드로잉 로직을 비공개 메서드로 위임
+            self._accumulate_trajectory(lm_list)
         else:
-            self.xp, self.yp = 0, 0
+            # 그리기 모드가 해제(손을 접음)되면 선이 엉뚱하게 이어지지 않도록 원점 초기화
+            self.prev_x, self.prev_y = 0, 0
 
-        # 캔버스 합성 연산
-        img_gray = cv2.cvtColor(self.canvas, cv2.COLOR_BGR2GRAY)
-        _, img_inv = cv2.threshold(img_gray, 50, 255, cv2.THRESH_BINARY_INV)
-        img_inv = cv2.cvtColor(img_inv, cv2.COLOR_GRAY2BGR)
-        img = cv2.bitwise_and(img, img_inv)
-        img = cv2.bitwise_or(img, self.canvas)
-        return img
+        # 캔버스에 그려진 빨간 선들을 원본 프레임에 정밀 병합 (이진 마스크 연산)
+        gray_canvas = cv2.cvtColor(self.canvas, cv2.COLOR_BGR2GRAY)
+        # 선이 그어진 부분(값이 0이 아닌 부분)을 흰색(255)으로 추출
+        _, mask = cv2.threshold(gray_canvas, 1, 255, cv2.THRESH_BINARY)
 
-    def _safe_move_mouse(self, x, y):
-        """[비공개 메서드] 화면 해상도 범위를 벗어나지 않도록 안전하게 마우스를 이동시킵니다."""
-        safe_x = max(0, min(x, self.screen_width - 1))
-        safe_y = max(0, min(y, self.screen_height - 1))
-        self.user32.SetCursorPos(safe_x, safe_y)
+        foreground = cv2.bitwise_and(self.canvas, self.canvas, mask=mask)
+        background = cv2.bitwise_and(frame, frame, mask=cv2.bitwise_not(mask))
+
+        return cv2.add(background, foreground)
+
+    def _accumulate_trajectory(self, lm_list):
+        """[Protected Helper] 외부에 노출하지 않고 내부적으로 손가락 이동 궤적을 계산하여 선을 누적하는 도우미 메서드."""
+        
+
+        # 부모 클래스 상수를 참조하여 PEP 8 Naming 관동 완벽 방어
+        cx = lm_list[self.INDEX_FINGER_TIP][self.X_AXIS_IDX]
+        cy = lm_list[self.INDEX_FINGER_TIP][self.Y_AXIS_IDX]
+
+        # 처음 그리기를 시작할 때 이전 좌표를 현재 좌표로 초기 동기화
+        if self.prev_x == 0 and self.prev_y == 0:
+            self.prev_x, self.prev_y = cx, cy
+
+        # [utils.py 활용] 손가락의 프레임 간 찰나의 이동 거리를 계산 (순간이동 튐 현상 제어)
+        dist = calculate_distance((self.prev_x, self.prev_y), (cx, cy))
+
+        # 오차 범위(65픽셀) 이내의 정상적인 움직임일 때만 연속된 부드러운 선으로 연결
+        if dist < 65:
+            cv2.line(
+                self.canvas, (self.prev_x, self.prev_y), (cx, cy),
+                self.draw_color, thickness=10
+            )
+
+        # 다음 프레임을 위한 좌표 저장
+        self.prev_x, self.prev_y = cx, cy

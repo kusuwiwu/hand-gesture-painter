@@ -1,42 +1,65 @@
 import cv2
+
 from my_package.subclass import GesturePainter
 
+# [마법의 숫자 제거] 최상단 공간에 메인 시스템 제어용 상수를 전면 전역화.
+CAMERA_ID = 0
+FLIP_MIRROR = 1
+DELAY_MS = 1
+
+HUD_POSITION = (10, 50)
+FONT_SCALE = 1
+HUD_COLOR_BGR = (0, 255, 0)
+LINE_THICKNESS = 2
+
+
 def main():
-    # 패키지화된 자식 클래스 인스턴스 생성 (README 가이드라인 일치)
-    painter = GesturePainter(max_num_hands=1, min_detection_confidence=0.7, draw_color=(0, 0, 255))
-    
-    cap = cv2.VideoCapture(0)
-    if not cap.isOpened():
-        print("🚨 에러: 웹캠을 열 수 없습니다.")
-        return
+    """실시간 웹캠 인터페이스를 제어하고 화면에 감지 결과를 렌더링합니다.
 
-    print("\n=== [최종 패키지 프로그램 가동 성공] ===")
-    print("- 검지 손가락을 펼치면 마우스가 부드럽게 움직입니다.")
-    print("- 창에서 'q' 키를 누르면 종료됩니다.\n")
+    :return: 변환값 없음(None)
+    """
+    painter = GesturePainter(
+        max_num_hands=1,
+        min_detection_confidence=0.7,
+        draw_color=(0, 0, 255)
+    )
 
-    cv2.namedWindow("Hand Gesture Mouse", cv2.WINDOW_AUTOSIZE)
-    cv2.setWindowProperty("Hand Gesture Mouse", cv2.WND_PROP_TOPMOST, 1)
+    cap = cv2.VideoCapture(CAMERA_ID)
+    print("프레임 캡처를 시작합니다. 종료하려면 'q'를 누르세요.")
 
-    while True:
+    while cap.isOpened():
         success, frame = cap.read()
-        if not success: 
+        if not success:
+            print("카메라 프레임을 읽을 수 없습니다.")
             break
 
-        # 거울 모드 좌우 반전
-        frame = cv2.flip(frame, 1)
-        
-        # 1. 부모로부터 상속받은 메서드로 랜드마크 추출
-        lm_list = painter.find_positions(frame)
-        
-        # 2. 자식 클래스의 고유 로직으로 마우스 제어 및 합성 드로잉 처리
-        frame = painter.draw_and_move(frame, lm_list, smoothening=5)
+        frame = cv2.flip(frame, FLIP_MIRROR)
 
-        cv2.imshow("Hand Gesture Mouse", frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'): 
+        # [SRP 준수] 순수하게 연산 데이터 배열만 추출합니다.
+        lm_list = painter.find_positions(frame)
+
+        # [SRP 준수] 시각화 기능 작동이 필요할 때 명시적으로 별도 호출.
+        frame = painter.draw_skeleton(frame)
+
+        # [SRP 준수] 손가락의 궤적을 영구 캔버스에 그리고 비디오 프레임 위에 합성합니다.
+        frame = painter.draw_canvas(frame, lm_list)
+
+        # 상단 HUD 정보 상태창 렌더링
+        if painter.is_drawing_mode(lm_list):
+            cv2.putText(
+                frame, "Drawing Mode Active", HUD_POSITION,
+                cv2.FONT_HERSHEY_SIMPLEX, FONT_SCALE,
+                HUD_COLOR_BGR, LINE_THICKNESS
+            )
+
+        cv2.imshow("Hand Gesture Painter", frame)
+
+        if cv2.waitKey(DELAY_MS) & 0xFF == ord("q"):
             break
 
     cap.release()
     cv2.destroyAllWindows()
+
 
 if __name__ == "__main__":
     main()

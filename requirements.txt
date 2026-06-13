@@ -1,4 +1,4 @@
-opencv-python>=4.5.0
-numpy>=1.20.0
-mediapipe>=0.8.0
-pytest>=7.0.0 
+opencv-python == 4.9.0.80
+numpy == 1.26.4
+mediapipe == 0.10.14
+pytest == 8.1.1 

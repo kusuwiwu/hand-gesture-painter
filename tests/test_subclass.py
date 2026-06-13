@@ -1,46 +1,67 @@
 import pytest
+import numpy as np
+import cv2
+
 from my_package.subclass import GesturePainter
 
-def test_painter_initialization():
-    """[Normal 3] 자식 클래스가 부모의 속성을 상속받고 고유 색상을 올바르게 초기화하는지 검증합니다."""
-    painter = GesturePainter(draw_color=(255, 0, 0))
-    assert painter.max_num_hands == 1
-    assert painter.draw_color == (255, 0, 0)
 
-def test_is_drawing_mode_true():
-    """[Normal 4] 검지는 펴지고 중지는 접혔으며, 두 손가락 거리가 충분할 때 그리기 모드가 True가 되는지 검증합니다."""
-    painter = GesturePainter()
-    # 21개 기본 좌표 생성 (y값이 클수록 화면 아래쪽임)
-    lm_list = [(i, 100, 100) for i in range(21)]
-    
-    # 검지 조건 성립: 끝마디(8번) y가 중간마디(6번) y보다 위(작음)에 있음
-    lm_list[8] = (8, 100, 50)
-    lm_list[6] = (6, 100, 100)
-    
-    # 중지 조건 성립: 끝마디(12번) y가 중간마디(10번) y보다 아래(큼)에 있음 (접힘)
-    lm_list[12] = (12, 150, 150)
-    lm_list[10] = (10, 150, 100)
-    
-    # 8번과 12번 사이의 거리는 (100,50)과 (150,150) -> 거리가 20보다 크므로 완벽 부합
-    assert painter.is_drawing_mode(lm_list) is True
+def test_gesture_painter_color_initialization():
+    """[정상] 자식 클래스 생성 시 지정한 BGR 색상 값이 올바르게 세팅되는가?"""
+    custom_color = (255, 0, 0)
+    painter = GesturePainter(draw_color=custom_color)
+    assert painter.draw_color == custom_color
 
-def test_is_drawing_mode_false_when_middle_finger_open():
-    """[Normal 5] 검지와 중지가 둘 다 펼쳐졌을 때는 그리기 모드가 작동하지 않고 False가 되는지 검증합니다."""
-    painter = GesturePainter()
-    lm_list = [(i, 100, 100) for i in range(21)]
-    
-    # 검지 펴짐☝️
-    lm_list[8] = (8, 100, 50)
-    lm_list[6] = (6, 100, 100)
-    
-    # 중지도 같이 펴짐✌️ (끝마디 y가 중간마디 y보다 위에 위치)
-    lm_list[12] = (12, 150, 50)
-    lm_list[10] = (10, 150, 100)
-    
-    assert painter.is_drawing_mode(lm_list) is False
 
-def test_is_drawing_mode_insufficient_landmarks():
-    """[Edge 5] 손가락 검출 좌표 개수가 21개 미만으로 깨져서 들어올 때 index error 없이 인식을 차단하는지 검증합니다."""
+def test_is_drawing_mode_none_input():
+    """[엣지: None] 제스처 판별기에 None 주입 시 크래시 없이 False 반환."""
     painter = GesturePainter()
-    invalid_lm_list = [(0, 0, 0), (1, 10, 10)] # 좌표가 2개밖에 없는 상황
-    assert painter.is_drawing_mode(invalid_lm_list) is False
+    assert painter.is_drawing_mode(None) is False
+
+
+def test_is_drawing_mode_empty_list():
+    """[엣지: 빈 입력] 빈 리스트([]) 주입 시 인덱스 에러 없이 False 반환."""
+    painter = GesturePainter()
+    assert painter.is_drawing_mode([]) is False
+
+
+def test_is_drawing_mode_boundary_equal_coordinates():
+    """[엣지: 경계값] 손가락 마디 Y좌표가 완전히 일치할 때의 판정 임계점 검증."""
+    painter = GesturePainter()
+    mock_lms = [[i, 100, 200] for i in range(21)]
+
+    # 검지 끝(8)과 검지 마디(6)의 Y좌표를 200으로 완전히 일치시킴 (경계값)
+    mock_lms[painter.INDEX_FINGER_TIP] = [8, 100, 200]
+    mock_lms[painter.INDEX_FINGER_PIP] = [6, 100, 200]
+
+    assert painter.is_drawing_mode(mock_lms) is False
+
+def test_is_drawing_mode_invalid_primitive_type():
+    """[엣지: 잘못된 타입] 랜드마크 리스트 자리에 무결하지 않은 정수형 데이터 주입 시 에러 없이 False 반환 조치."""
+    painter = GesturePainter()
+    # 리스트나 내부 인덱싱 구조가 전혀 없는 잘못된 타입 주입 시 예외 발생 여부 검증
+    assert painter.is_drawing_mode(99999) is False
+    assert painter.is_drawing_mode("InvalidStringData") is False
+
+
+def test_draw_canvas_accumulates_lines():
+    """[기능] 그리기 모드 상태일 때 영구 캔버스 공간에 선이 정상적으로 축적되는지 검증."""
+    painter = GesturePainter()
+    mock_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+    mock_lms = [[i, 100, 200] for i in range(21)]
+
+    # 검지 펼침 및 중지 접음 (그리기 모드 활성화 환경 강제 조성)
+    mock_lms[painter.INDEX_FINGER_TIP] = [8, 100, 100]
+    mock_lms[painter.INDEX_FINGER_PIP] = [6, 100, 200]
+    mock_lms[painter.MIDDLE_FINGER_TIP] = [12, 300, 300]
+    mock_lms[painter.MIDDLE_FINGER_PIP] = [10, 300, 250]
+
+    # 프레임 1: 시작점 동기화 (아직 한 점이라 선이 안 생김)
+    painter.draw_canvas(mock_frame, mock_lms)
+    
+    # 프레임 2: 손가락을 이동시켜 선 궤적 누적 유도
+    mock_lms[painter.INDEX_FINGER_TIP] = [8, 110, 110]
+    painter.draw_canvas(mock_frame, mock_lms)
+
+    # 캔버스에 실제로 선(0이 아닌 색상 값)이 활성화되었는지 판단
+    gray_canvas = cv2.cvtColor(painter.canvas, cv2.COLOR_BGR2GRAY)
+    assert np.sum(gray_canvas > 0) > 0
