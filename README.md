@@ -105,6 +105,7 @@
  pytest -v 파이테스트 실행
 
 ## (5-1)pytest 결과
+ ```test결과
  (.venv) C:\Users\User\Desktop\hand_gesture_painter_work>pytest -v
  ======================================= test session starts ========================================
  platform win32 -- Python 3.11.0, pytest-8.1.1, pluggy-1.6.0 -- C:\Users\User\Desktop\hand_gesture_painter_work\.venv\Scripts\python.exe
@@ -131,9 +132,10 @@
  ======================================== 13 passed in 1.94s   ========================================
  W0000 00:00:1781443286.060330  171588 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
  W0000 00:00:1781443286.073978  172252 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
- W0000 00:00:1781443286.080406  173776 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+ W0000 00:00:1781443286.080406  173776 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.```
 
 ## 5-3 프로젝트 구조
+ ```text
  hand_gesture_painter_work/
  │
  ├── my_package/
@@ -161,7 +163,7 @@
  ├── pycodestyle_result.png
  ├── pycodestyle_result1.png
  ├── pycodestyle_result2.png
- └── pytest_result.png
+ └── pytest_result.png```
 
 ## (6)작성자정보 
  소속학교 건국대학교 글로컬캠퍼스
