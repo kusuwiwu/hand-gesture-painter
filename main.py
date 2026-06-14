@@ -61,5 +61,5 @@ def main():
     cv2.destroyAllWindows() # 모든 OpenCV 창 닫기
 
 
-if __name__ == "__main__": #이파일으 직접실행했을때만 main()실행
+if __name__ == "__main__": #이파일을 직접실행했을때만 main()실행
     main()
