@@ -20,7 +20,7 @@
  pip install .
 
 ## (3)빠른 시작
- main.py실행시 또는 아래 코드를 실행시 가능.
+ main.py실행시 또는 아래 코드를 실행시 가능. 실행하기 전에 반드시 (2) 설치 방법에 따라 필수 라이브러리(pip install .)가 설치되어 있어야 합니다.
 
  ```python
  import cv2
