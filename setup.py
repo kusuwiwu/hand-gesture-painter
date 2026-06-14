@@ -10,7 +10,7 @@ setup(
     long_description_content_type="text/markdown",
     packages=find_packages(),
     include_package_data=True,
-    python_requires=">=3.11.0, <3.12.0",  # Python 3.11.0 지정을 위한 방어 조치
+    python_requires="==3.11.0", 
     install_requires=[
         "opencv-python == 4.9.0.80",
         "mediapipe == 0.10.14",
