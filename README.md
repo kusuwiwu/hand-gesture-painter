@@ -1,9 +1,7 @@
 (1)프로젝트 개요.
 본 프로그램은 python 프로그래밍(8257)기말과제 대체 python 프로그래밍 기말 프로젝트를 위해 제작되었음.
 
-제작목적은 웹캠이 손을 인식해서 랜드마크로 추적하고 마우스를 움직이는 기능을 수행 및 검지손가락을 인식해서 빨간색 선을 긋게 하는기능을 수행.
-
-마우스 포인터를 대체할수 있는 기능을 테스트 하는것임.
+제작목적은 웹캠이 손을 인식해서 랜드마크로 추적하고행 및 검지손가락을 인식해서 빨간색 선을 긋게 하는기능을 수행.
 
 핵심 기능 검지손가락 만을 펼쳤을때 그리기 모드가 활성화되어 검지손가락으로 빨간선을 그을수 있음.
 종료 메커니즘 q를눌러 리소스 헤제 및 프로그램을 종료시킴.
@@ -104,35 +102,37 @@ cmd 기준
 python -m venv .venv 가상환경 설정
 call .venv\Scripts\activate 가상환경 활성화
 pip install -r requirements.txt 목록 라이브러리 설치
-pip install -e . 파이썬 파일 다운
+pip install . 파이썬 파일 다운
 pytest -v 파이테스트 실행
 
 (5-1)pytest 결과
+(.venv) C:\Users\User\Desktop\hand_gesture_painter_work>pytest -v
+======================================= test session starts ========================================
 platform win32 -- Python 3.11.0, pytest-8.1.1, pluggy-1.6.0 -- C:\Users\User\Desktop\hand_gesture_painter_work\.venv\Scripts\python.exe
 cachedir: .pytest_cache
 rootdir: C:\Users\User\Desktop\hand_gesture_painter_work
-collected 13 items                                                                                                                            
+collected 13 items                                                                                  
 
-tests/test_core.py::test_find_positions_none_image PASSED                                                                               [  7%]
-tests/test_core.py::test_is_valid_list_normal_data PASSED                                                                               [ 15%]
-tests/test_core.py::test_is_valid_list_none_input PASSED                                                                                [ 23%]
-tests/test_core.py::test_is_valid_list_empty_list PASSED                                                                                [ 30%]
-tests/test_subclass.py::test_gesture_painter_color_initialization PASSED                                                                [ 38%]
-tests/test_subclass.py::test_is_drawing_mode_none_input W0000 00:00:1781403068.057334  131472 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
-W0000 00:00:1781403068.060441  139316 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
-PASSED                                                                          [ 46%]
-tests/test_subclass.py::test_is_drawing_mode_empty_list PASSED                                                                          [ 53%]
-tests/test_subclass.py::test_is_drawing_mode_boundary_equal_coordinates PASSED                                                          [ 61%]
-tests/test_subclass.py::test_is_drawing_mode_invalid_primitive_type PASSED                                                              [ 69%]
-tests/test_subclass.py::test_draw_canvas_accumulates_lines W0000 00:00:1781403068.170071  137800 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
-PASSED                                                                       [ 76%]
-tests/test_utils.py::test_calculate_distance_normal_coordinates PASSED                                                                  [ 84%]
-tests/test_utils.py::test_calculate_distance_boundary_zero PASSED                                                                       [ 92%]
-tests/test_utils.py::test_calculate_distance_invalid_primitive_type PASSED                                                              [100%]
-W0000 00:00:1781403068.270978  140924 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+tests/test_core.py::test_find_positions_none_image PASSED                                     [  7%]
+tests/test_core.py::test_is_valid_list_normal_data PASSED                                     [ 15%]
+tests/test_core.py::test_is_valid_list_none_input INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+PASSED                                      [ 23%]
+tests/test_core.py::test_is_valid_list_empty_list PASSED                                      [ 30%]
+tests/test_subclass.py::test_gesture_painter_color_initialization PASSED                      [ 38%]
+tests/test_subclass.py::test_is_drawing_mode_none_input PASSED                                [ 46%]
+tests/test_subclass.py::test_is_drawing_mode_empty_list PASSED                                [ 53%]
+tests/test_subclass.py::test_is_drawing_mode_boundary_equal_coordinates PASSED                [ 61%]
+tests/test_subclass.py::test_is_drawing_mode_invalid_primitive_type PASSED                    [ 69%]
+tests/test_subclass.py::test_draw_canvas_accumulates_lines PASSED                             [ 76%]
+tests/test_utils.py::test_calculate_distance_normal_coordinates PASSED                        [ 84%]
+tests/test_utils.py::test_calculate_distance_boundary_zero PASSED                             [ 92%]
+tests/test_utils.py::test_calculate_distance_invalid_primitive_type PASSED                    [100%]
+W0000 00:00:1781443285.985803  170396 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
 
-============================================================= 13 passed in 3.25s =============================================================
-W0000 00:00:1781403068.287092  138204 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+======================================== 13 passed in 1.94s ========================================
+W0000 00:00:1781443286.060330  171588 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1781443286.073978  172252 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+W0000 00:00:1781443286.080406  173776 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
 
 5-3 프로젝트 구조
 hand_gesture_painter_work
@@ -141,17 +141,25 @@ my_package 핵심 엔진 폴더
  core.py 부모클레스 영상잔처리 및 랜드마크 추출 예외차단.
  subclass.py 자식클래스 손동작분석 및 동작에따른 모드 판단.
  utils.py 좌표간 거리계산 함수
-
 tests 테스트용 파일
  __init__.py
  test_core.py 부모클레스 영상잔처리 및 랜드마크 추출 예외차단.
  test_subclass.py 자식클래스 손동작분석 및 동작에따른 모드 판단.
  test_utils.py 좌표간 거리계산 함수
+.gitnore
 main.py 메인코드
+pip install. result.png pip install. 실행사진
+pip install. result1.png pip install. 실행사진
+pycodestyle_result.png pycodestyle 실행사진
+pycodestyle_result1.png pycodestyle 실행사진
+pycodestyle_result2.png pycodestyle 실행사진
+pytest_result.png pytest 실행사진
 READEM.md 설명서
 requirements.txt 필요한 외부라이브러리
-self_review.md 스스로 점검
+results.md pytest,pycodestyle, pip install . 실행사진 및 실행결과
+self_review.md AI사용내역
 stepup.py 패키지 배포 및 빌드 설정 파일
+STYLE.md pytest 실행결과
 
 (6)작성자정보 
 소속학교 건국대학교 글로컬캠퍼스
