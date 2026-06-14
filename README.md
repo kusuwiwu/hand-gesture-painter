@@ -135,31 +135,34 @@ W0000 00:00:1781443286.073978  172252 inference_feedback_manager.cc:114] Feedbac
 W0000 00:00:1781443286.080406  173776 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
 
 5-3 프로젝트 구조
-hand_gesture_painter_work
-my_package 핵심 엔진 폴더
- __init__.py
- core.py 부모클레스 영상잔처리 및 랜드마크 추출 예외차단.
- subclass.py 자식클래스 손동작분석 및 동작에따른 모드 판단.
- utils.py 좌표간 거리계산 함수
-tests 테스트용 파일
- __init__.py
- test_core.py 부모클레스 영상잔처리 및 랜드마크 추출 예외차단.
- test_subclass.py 자식클래스 손동작분석 및 동작에따른 모드 판단.
- test_utils.py 좌표간 거리계산 함수
-.gitnore
-main.py 메인코드
-pip install. result.png pip install. 실행사진
-pip install. result1.png pip install. 실행사진
-pycodestyle_result.png pycodestyle 실행사진
-pycodestyle_result1.png pycodestyle 실행사진
-pycodestyle_result2.png pycodestyle 실행사진
-pytest_result.png pytest 실행사진
-READEM.md 설명서
-requirements.txt 필요한 외부라이브러리
-results.md pytest,pycodestyle, pip install . 실행사진 및 실행결과
-self_review.md AI사용내역
-stepup.py 패키지 배포 및 빌드 설정 파일
-STYLE.md pytest 실행결과
+hand_gesture_painter_work/
+│
+├── my_package/
+│   ├── __init__.py
+│   ├── core.py
+│   ├── subclass.py
+│   └── utils.py
+│
+├── tests/
+│   ├── __init__.py
+│   ├── test_core.py
+│   ├── test_subclass.py
+│   └── test_utils.py
+│
+├── .gitignore
+├── main.py
+├── README.md
+├── requirements.txt
+├── setup.py
+├── self_review.md
+├── results.md
+│
+├── pip_install_result.png
+├── pip_install_result1.png
+├── pycodestyle_result.png
+├── pycodestyle_result1.png
+├── pycodestyle_result2.png
+└── pytest_result.png
 
 (6)작성자정보 
 소속학교 건국대학교 글로컬캠퍼스
@@ -169,3 +172,4 @@ STYLE.md pytest 실행결과
 
 (7) github url
 https://github.com/kusuwiwu/hand-gesture-painter
+
