@@ -7,7 +7,7 @@ class HandDetector:
     Example:
         >>> detector = HandDetector()
         >>> detector is not None
-        TRUE
+        True
         >>> detector.find_positions(None)
         []
     """
