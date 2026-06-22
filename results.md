@@ -156,6 +156,6 @@ Successfully installed absl-py-2.4.0 attrs-26.1.0 cffi-2.0.0 contourpy-1.3.3 cyc
 [notice] A new release of pip available: 22.3 -> 26.1.2
 [notice] To update, run: python.exe -m pip install --upgrade pip
 
-![pip_install_실행결과1](pip install_result.png)
-![pip_install_실행결과2](pip install_result1.png)
-![pip_install_실행결과3](pip install_result2.png)
+![pip_install_실행결과1](pip_install_result.png)
+![pip_install_실행결과2](pip_install_result1.png)
+![pip_install_실행결과3](pip_install_result2.png)
