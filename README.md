@@ -14,7 +14,7 @@
  mediapipe == 0.10.14
  pytest == 8.1.1 
  (requirements.txt에 나와있음.)
- 반드시 python 3.11.0 버전에서 실행
+ python 3.11.x 버전에서 실행
 
  프로젝트 루트 디렉토리에서 아래명령어 수행 및 다운
  pip install .

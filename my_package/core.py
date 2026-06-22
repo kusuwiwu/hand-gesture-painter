@@ -7,9 +7,9 @@ class HandDetector:
     Example:
         >>> detector = HandDetector()
         >>> detector is not None
+        TRUE
         >>> detector.find_positions(None)
         []
-        True
     """
 
     # 주요 관절 포인트 인덱스를 전역 상수로 전면 지정 검지,중지 끝 중간상수 설정
@@ -93,7 +93,7 @@ class HandDetector:
             >>> detector._is_valid_list([])
             False
             >>> detector._is_valid_list(None)
-        False
+            False
         """
 
         # None 입력 오류방지
